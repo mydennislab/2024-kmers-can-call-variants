@@ -1,16 +1,23 @@
 cmake_minimum_required (VERSION 3.4)
 project (kDecontaminer C CXX)
 set(default_build_type "Release")
-set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -std=c++17 -fPIC -lgomp -lrt -fopenmp -W -Wall -pedantic -O3 -Ofast -march=native")
+set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -std=c++17 -fPIC -lgomp -lrt -fopenmp -pedantic -O3 -Ofast")
 
 add_subdirectory(lib/kmerDecoder)
 add_subdirectory(lib/zstr)
 
-set(PHMAP_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/lib/kmerDecoder/lib/parallel-hashmap")
-include_directories("${PHMAP_INCLUDE_DIRS}")
+include_directories("${PROJECT_SOURCE_DIR}/include")
 
-include_directories(includes)
+include_directories("${PROJECT_SOURCE_DIR}/lib/kmerDecoder/lib/parallel-hashmap/")
+include_directories("lib/progressbar/include")
 
+
+CPMAddPackage(
+        NAME kseq
+        SOURCE_DIR ${CMAKE_CURRENT_LIST_DIR}/lib/kmerDecoder/kseq
+)
+set(KSEQ_INCLUDE_DIRS "${PROJECT_SOURCE_DIR}/lib/kmerDecoder/lib/kseq/include")
+include_directories($KSEQ_INCLUDE_DIRS)
 
 # add_executable (peReadsStats reads_stats.cpp src/kseqReader.cpp)
 # target_link_libraries (peReadsStats kProcessor z)
@@ -46,3 +53,12 @@ include_directories(includes)
 # 1) Convert the reference to bin
 add_executable(refToBin 1_ref_to_bin.cpp)
 target_link_libraries(refToBin kmerDecoder pthread z zstr::zstr)
+
+
+add_executable(fqPart 2_fastq_partitioner.cpp src/helper_functions.cpp)
+target_link_libraries(fqPart kmerDecoder pthread z zstr::zstr kseq::kseq)
+
+
+# Testing
+add_executable(test test/test_scoring.cpp src/helper_functions.cpp)
+target_link_libraries(test)
