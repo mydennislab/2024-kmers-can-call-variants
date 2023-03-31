@@ -19,6 +19,8 @@ CPMAddPackage(
 set(KSEQ_INCLUDE_DIRS "${PROJECT_SOURCE_DIR}/lib/kmerDecoder/lib/kseq/include")
 include_directories($KSEQ_INCLUDE_DIRS)
 
+include_directories("${PROJECT_SOURCE_DIR}/lib/argh")
+
 # add_executable (peReadsStats reads_stats.cpp src/kseqReader.cpp)
 # target_link_libraries (peReadsStats kProcessor z)
 # target_include_directories(peReadsStats INTERFACE ${kProcessor_INCLUDE_PATH})

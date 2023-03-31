@@ -13,6 +13,7 @@
 #include "parallel_hashmap/phmap_dump.h"
 #include <kmerDecoder.hpp>
 #include <helper_functions.hpp>
+#include <argh.h>
 
 // KSEQ_INIT(gzFile, gzread)
 
@@ -80,9 +81,100 @@ int count_intersections(const std::vector<KeyType>& s, const flat_hash_map<KeyTy
     return intersection_count;
 }
 
+#include <iostream>
+#include <string>
+#include <argh.h>
+
+void print_help()
+{
+    std::cout << "Usage: program_name [options]\n"
+        "Options:\n"
+        "  --R1 <file>          R1 input file (required)\n"
+        "  --R2 <file>          R2 input file (required)\n"
+        "  --genomes_dir <dir>  dir containing genomes bins created by refToBin\n"
+        "  --write              Enable writing partitioned fastq files\n"
+        "  --kSize <int>    K-mer size (required)\n"
+        "  --threads <number>   Number of genomes loading threads (default: 1)\n"
+        "  --help, -h           Show this help message and exit\n";
+}
+
+
+
 
 int main(int argc, char** argv) {
 
+    /*
+        -1 Parsing command line arguments using argh
+    */
+
+    argh::parser cmdl;
+    cmdl.add_params({ "--genomes_dir", "--threads", "--R1", "--R2", "--write", "--kSize", "--help", "-h" });
+    cmdl.parse(argc, argv);
+
+    if (cmdl[{"--help", "-h"}])
+    {
+        print_help();
+        return 0;
+    }
+
+    int threads = 1; // Default value
+    string R1_file;
+    string R2_file;
+    string output = "NA"; // Default value
+    int kSize;
+    string genomes_dir;
+    bool write = false;
+
+    if (cmdl({ "--threads" }))
+        cmdl({ "--threads" }, 1) >> threads;
+
+    if (cmdl({ "--R1" }))
+        cmdl({ "--R1" }, 1) >> R1_file;
+    else
+    {
+        std::cerr << "Error: R1 file argument is required.\n";
+        return 1;
+    }
+
+    if (cmdl({ "--R2" }))
+        cmdl({ "--R2" }, 1) >> R2_file;
+    else
+    {
+        std::cerr << "Error: R2 file argument is required.\n";
+        return 1;
+    }
+
+    if (cmdl({ "--genomes_dir" }))
+        cmdl({ "--genomes_dir" }, 1) >> genomes_dir;
+    else
+    {
+        std::cerr << "Error: genomes_dir argument is required.\n";
+        return 1;
+    }
+
+    if (cmdl({ "--output" }))
+        cmdl({ "--output" }, 1) >> output;
+
+    if (cmdl({ "--kSize" }))
+        cmdl({ "--kSize" }, 1) >> kSize;
+    else
+    {
+        std::cerr << "Error: kSize argument is required.\n";
+        return 1;
+    }
+
+    if (cmdl({"--write"}))
+        write = true;
+
+    std::cout << "Threads: " << threads << std::endl;
+    std::cout << "R1 File: " << R1_file << std::endl;
+    std::cout << "R2 File: " << R2_file << std::endl;
+    std::cout << "Output: " << output << std::endl;
+    std::cout << "K-mer size: " << kSize << std::endl;
+    std::cout << "Genomes dir: " << genomes_dir << std::endl;
+    std::cout << "Write: " << write << std::endl;
+    // print line
+    std::cout << "----------------------------------------\n" << std::endl;
 
 
     /*
@@ -97,7 +189,7 @@ int main(int argc, char** argv) {
     */
 
     BINS_PHMAP bins;
-    load_all_bins("/home/mabuelanin/dib-dev/2023-decontamination/data/bins", &bins, 3);
+    load_all_bins(genomes_dir, &bins, threads);
     cout << "All genomes has been loaded" << endl;
 
 
@@ -109,30 +201,26 @@ int main(int argc, char** argv) {
         genome_to_id[genome_name] = ++id_counter;
         id_to_genome[id_counter] = genome_name;
     }
+    stats.set_id_to_genome(id_to_genome);
 
     /*
         2- Creating file handlers
     */
 
-    string PE_1_reads_file = "/home/mabuelanin/dib-dev/2023-decontamination/data/samples/subset_Ast25B_R1_001.fastq.gz";
-    string PE_2_reads_file = "/home/mabuelanin/dib-dev/2023-decontamination/data/samples/subset_Ast25B_R2_001.fastq.gz";
-    int chunk_size = 10000;
-    int kSize = 21;
     kmerDecoder* KMER_HASHER = kmerDecoder::getInstance(KMERS, mumur_hasher, { {"kSize", kSize} });
-    bool write_fastq = false;
+    bool write_fastq = write;
 
 
-
-    if (!file_exists(PE_1_reads_file)) {
+    if (!file_exists(R1_file)) {
         throw std::runtime_error("Could not open the unitigs fasta file");
     }
 
-    if (!file_exists(PE_2_reads_file)) {
+    if (!file_exists(R2_file)) {
         throw std::runtime_error("Could not open the unitigs fasta file");
     }
 
 
-    std::string base_filename = PE_1_reads_file.substr(PE_1_reads_file.find_last_of("/\\") + 1);
+    std::string base_filename = R1_file.substr(R1_file.find_last_of("/\\") + 1);
     base_filename = base_filename.substr(0, base_filename.find('R1'));
 
     map<string, fastqWriter*> fasta_writer;
@@ -153,8 +241,8 @@ int main(int argc, char** argv) {
 
     gzFile fp_1, fp_2;
     kseq_t* kseq_1, * kseq_2;
-    fp_1 = gzopen(PE_1_reads_file.c_str(), "r");
-    fp_2 = gzopen(PE_2_reads_file.c_str(), "r");
+    fp_1 = gzopen(R1_file.c_str(), "r");
+    fp_2 = gzopen(R2_file.c_str(), "r");
 
     kseq_1 = kseq_init(fp_1);
     kseq_2 = kseq_init(fp_2);
@@ -162,6 +250,13 @@ int main(int argc, char** argv) {
     int Reads_chunks_counter = 0;
 
     cout << "Partitioning the reads" << endl;
+    if (write_fastq) {
+        cout << "Writing the reads to fasta files" << endl;
+    }
+    else {
+        cout << "Only stats" << endl;
+    }
+
     for (int seqCounter = 0; kseq_read(kseq_1) >= 0 && kseq_read(kseq_2) >= 0; seqCounter++) {
 
         uint32_t seq_1_length = string(kseq_1->seq.s).size();
@@ -195,8 +290,9 @@ int main(int argc, char** argv) {
             }
         }
 
-
-        auto category = classify_and_match_read_kmers(kmers_matches, stats, 0.1, 2.0);
+        double coverage_threshold = 0.1;
+        double abundance_threshold = 2.0;
+        auto category = classify_and_match_read_kmers(kmers_matches, stats, coverage_threshold, abundance_threshold);
 
 
         if (write_fastq) {

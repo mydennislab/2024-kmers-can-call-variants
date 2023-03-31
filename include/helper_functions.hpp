@@ -72,9 +72,8 @@ public:
     void increment_unmapped();
     void increment_ambiguous(uint32_t genome_name);
     void increment_unique(uint32_t genome_name);
-    void print_json();
     void print_json_to_file(string output_file);
-    void set_it_to_genome(flat_hash_map<int, string> & id_to_genome);
+    void set_id_to_genome(flat_hash_map<int, string> & id_to_genome);
     string get_genome_name(uint32_t id);
 };
 

@@ -237,38 +237,29 @@ std::pair<string, std::vector<uint32_t>> classify_and_match_read_kmers(const std
 
 
 void Stats::increment_unmapped() {
-    ++unmatched;
+    this->unmatched++;
 }
 
 void Stats::increment_ambiguous(uint32_t genome_id) {
-    ++stats[this->get_genome_name(genome_id)]["ambiguous"];
+    this->stats[this->get_genome_name(genome_id)]["ambiguous"]++;
 }
 
 void Stats::increment_unique(uint32_t genome_id) {
-    ++stats[this->get_genome_name(genome_id)]["unique"];
+    this->stats[this->get_genome_name(genome_id)]["unique"]++;
 }
 
-void Stats::set_it_to_genome(flat_hash_map<int, string>& id_to_genome) {
-    this->id_to_genome = id_to_genome;
+void Stats::set_id_to_genome(flat_hash_map<int, string>& external_id_to_genome) {
+    for (const auto& [id, genome_name] : external_id_to_genome) {
+        this->id_to_genome[id] = genome_name;
+        this->stats[genome_name] = {
+            {"ambiguous", 0},
+            {"unique", 0}
+        };
+    }
 }
 
 string Stats::get_genome_name(uint32_t id) {
     return id_to_genome[id];
-}
-
-void Stats::print_json() {
-    cout << "{" << endl;
-    cout << "\t\"unmapped\": " << unmatched << "," << endl;
-    cout << "\t\"mapped\": {" << endl;
-    for (const auto& [genome_name, genome_stats] : stats) {
-        cout << "\t\t\"" << genome_name << "\": {" << endl;
-        for (const auto& [stat_name, stat_value] : genome_stats) {
-            cout << "\t\t\t\"" << stat_name << "\": " << stat_value << "," << endl;
-        }
-        cout << "\t\t}," << endl;
-    }
-    cout << "\t}" << endl;
-    cout << "}" << endl;
 }
 
 void Stats::print_json_to_file(string output_file) {
