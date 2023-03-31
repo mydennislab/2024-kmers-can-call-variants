@@ -35,7 +35,7 @@ string reformat_long_number(uint64_t number) {
 int main(int argc, char** argv) {
 
     if (argc != 4) {
-        cout << "run: ./refToBin <kSize> <min_abundance> <output_file>" << endl;
+        cout << "run: ./refToBin <fasta_path> <kSize> <output_path>" << endl;
         exit(1);
     }
 
@@ -48,16 +48,15 @@ int main(int argc, char** argv) {
 
     auto begin_time = Time::now();
 
-    phmap::flat_hash_set<uint64_t> hashes;
+    // phmap::flat_hash_set<uint64_t> hashes;
+    phmap::flat_hash_map<uint64_t, uint32_t> hashes;
 
 
     std::string base_filename = fasta_path.substr(fasta_path.find_last_of("/\\") + 1);
     base_filename = base_filename.substr(0, base_filename.find('_'));
 
     kmerDecoder* REF_KMERS = kmerDecoder::getInstance(fasta_path, chunk_size, KMERS, mumur_hasher, { {"kSize", kSize} });
-    int Reads_chunks_counter = 0;
     uint64_t total_kmers = 0;
-    uint64_t inserted_kmers = 0;
 
     while (!REF_KMERS->end() && !REF_KMERS->end()) {
         REF_KMERS->next_chunk();
@@ -67,19 +66,14 @@ int main(int argc, char** argv) {
 
         while (seq1 != seq1_end) {
             for (auto const kRow : seq1->second) {
-                auto res = hashes.insert(kRow.hash);
-                if (res.second) {
-                    inserted_kmers++;
-                    total_kmers++;
-                    continue;
-                }
+                hashes[kRow.hash]++;
                 total_kmers++;
             }
             seq1++;
         }
     }
 
-    cout << "inserted " << reformat_long_number(inserted_kmers) << " unique kmers our of " << reformat_long_number(total_kmers) << " ." << endl;
+    cout << "inserted " << reformat_long_number(hashes.size()) << " unique kmers out of " << reformat_long_number(total_kmers) << " ." << endl;
     string out_path = output_path;
     phmap::BinaryOutputArchive ar_out(out_path.c_str());
     hashes.phmap_dump(ar_out);

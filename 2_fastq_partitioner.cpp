@@ -67,18 +67,17 @@ inline bool file_exists(const std::string& name) {
     return (stat(name.c_str(), &buffer) == 0);
 }
 
+template <typename KeyType, typename ValueType>
+int count_intersections(const std::vector<KeyType>& s, const flat_hash_map<KeyType, ValueType>& m) {
+    int intersection_count = 0;
 
-size_t set_intersection_count(const phmap::flat_hash_set<uint64_t>& set1, const phmap::flat_hash_set<uint64_t>& set2) {
-    // no need to compare sizes if I use the smaller set as the first argument
-    // auto [smaller_set, larger_set] = (set1.size() <= set2.size()) ? std::tie(set1, set2) : std::tie(set2, set1);
-    auto smaller_set = set1;
-    auto larger_set = set2;
-
-    size_t count = 0;
-    for (const auto& element : smaller_set) {
-        count += larger_set.count(element);
+    for (const auto& key : s) {
+        if (m.find(key) != m.end()) {
+            ++intersection_count;
+        }
     }
-    return count;
+
+    return intersection_count;
 }
 
 
@@ -155,7 +154,7 @@ int main() {
 
     int Reads_chunks_counter = 0;
 
-    cout << "Partitioning the reads ..." << endl;
+    cout << "Partitioning the reads" << endl;
     for (int seqCounter = 0; kseq_read(kseq_1) >= 0 && kseq_read(kseq_2) >= 0; seqCounter++) {
 
         uint32_t seq_1_length = string(kseq_1->seq.s).size();
@@ -169,10 +168,10 @@ int main() {
         vector<kmer_row> kmers;
         KMER_HASHER->seq_to_kmers(seq, kmers);
         // Convert kmer_row kmers to uint64_t hashes.
-        flat_hash_set<uint64_t> kmers_set;
-        kmers_set.reserve(kmers.size()); // Preallocate memory        
+        vector<uint64_t> kmers_vec;
+        kmers_vec.reserve(kmers.size()); // Preallocate memory        
         for (const auto& kmer : kmers) {
-            kmers_set.emplace(kmer.hash);
+            kmers_vec.emplace_back(kmer.hash);
         }
 
 
@@ -184,7 +183,9 @@ int main() {
 
         vector<uint32_t> kmers_matches;
         for (auto& [genome_name, genome_kmers] : bins) {
-            size_t intersection_kmers = set_intersection_count(kmers_set, genome_kmers);
+            
+            size_t intersection_kmers = count_intersections(kmers_vec, genome_kmers);
+            
             for (size_t i = 0; i < intersection_kmers; i++) {
                 kmers_matches.emplace_back(genome_to_id[genome_name]);
             }
