@@ -1,10 +1,8 @@
-
 #include <cstdint>
 #include <chrono>
 #include <glob.h>
 #include <sstream>
 #include <string>
-#include <progressbar.hpp>
 #include "string"
 #include <stdexcept>
 #include "tuple"
@@ -60,11 +58,6 @@ void load_all_bins(string bins_dir, BINS_PHMAP* bin_to_hashes, int cores) {
     auto all_files = file_fetcher(bins_dir + "/*.bin");
     cout << "Fetched " << all_files.size() << " genome(s) .." << endl;
     bin_to_hashes->reserve(all_files.size());
-    progressbar bar(all_files.size());
-    bar.set_todo_char(" ");
-    bar.set_done_char("█");
-    bar.set_opening_bracket_char("{");
-    bar.set_closing_bracket_char("}");
 #pragma omp parallel num_threads(cores)
     {
 #pragma omp for

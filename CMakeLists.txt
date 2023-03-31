@@ -9,7 +9,6 @@ add_subdirectory(lib/zstr)
 include_directories("${PROJECT_SOURCE_DIR}/include")
 
 include_directories("${PROJECT_SOURCE_DIR}/lib/kmerDecoder/lib/parallel-hashmap/")
-include_directories("lib/progressbar/include")
 
 
 CPMAddPackage(
