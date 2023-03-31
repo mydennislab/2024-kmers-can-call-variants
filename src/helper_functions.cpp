@@ -81,7 +81,7 @@ void load_all_bins(string bins_dir, BINS_PHMAP* bin_to_hashes, int cores) {
                 continue;
             }
 
-            phmap::flat_hash_set<uint64_t> bin_hashes;
+            phmap::flat_hash_map<uint64_t, uint32_t> bin_hashes;
             phmap::BinaryInputArchive ar_in(file.path.c_str());
             bin_hashes.phmap_load(ar_in);
 
@@ -149,6 +149,51 @@ The classify_and_match_read_kmers function takes the following parameters:
   compared to the second most common genome. This helps to ensure that the dominant genome is significantly more
   abundant than the others, increasing confidence in the classification.
 */
+std::pair<string, std::vector<uint32_t>> classify_and_match_read_kmers(const std::vector<uint32_t>& genome_ids, Stats& stats, double coverage_threshold, double ratio_threshold) {
+    if (genome_ids.empty()) {
+        stats.increment_unmapped();
+        return { "unmapped", {} };
+    }
+
+    flat_hash_map<uint32_t, uint32_t> genome_id_count;
+    for (const auto& id : genome_ids) {
+        genome_id_count[id]++;
+    }
+
+    auto max_it = std::max_element(genome_id_count.begin(), genome_id_count.end(),
+        [](const auto& a, const auto& b) { return a.second < b.second; });
+
+    double coverage = static_cast<double>(max_it->second) / genome_ids.size();
+    // cout << "coverage: " << coverage << " threshold: " << coverage_threshold << "\n";
+    if (coverage < coverage_threshold) {
+        stats.increment_unmapped();
+        return { "unmapped", {} };
+    }
+
+    std::vector<uint32_t> matching_genome_ids{max_it->first};
+    genome_id_count.erase(max_it);
+
+    for (const auto& [genome_id, count] : genome_id_count) {
+        double ratio = static_cast<double>(max_it->second) / count;
+        // cout << "ratio(" << genome_id << "): " << ratio << " threshold: " << ratio_threshold << "\n";
+        if (ratio < ratio_threshold) {
+            matching_genome_ids.push_back(genome_id);
+        }
+    }
+
+    if (matching_genome_ids.size() > 1) {
+        for (const auto& id : matching_genome_ids) {
+            stats.increment_ambiguous(id);
+        }
+        return { "ambiguous", matching_genome_ids };
+    }
+    else {
+        stats.increment_unique(matching_genome_ids[0]);
+        return { "unique", matching_genome_ids };
+    }
+}
+
+// Without stats
 std::pair<string, std::vector<uint32_t>> classify_and_match_read_kmers(const std::vector<uint32_t>& genome_ids, double coverage_threshold, double ratio_threshold) {
     if (genome_ids.empty()) {
         return { "unmapped", {} };
@@ -185,4 +230,60 @@ std::pair<string, std::vector<uint32_t>> classify_and_match_read_kmers(const std
     else {
         return { "unique", matching_genome_ids };
     }
+}
+
+
+// STATS
+
+
+void Stats::increment_unmapped() {
+    ++unmatched;
+}
+
+void Stats::increment_ambiguous(uint32_t genome_id) {
+    ++stats[this->get_genome_name(genome_id)]["ambiguous"];
+}
+
+void Stats::increment_unique(uint32_t genome_id) {
+    ++stats[this->get_genome_name(genome_id)]["unique"];
+}
+
+void Stats::set_it_to_genome(flat_hash_map<int, string>& id_to_genome) {
+    this->id_to_genome = id_to_genome;
+}
+
+string Stats::get_genome_name(uint32_t id) {
+    return id_to_genome[id];
+}
+
+void Stats::print_json() {
+    cout << "{" << endl;
+    cout << "\t\"unmapped\": " << unmatched << "," << endl;
+    cout << "\t\"mapped\": {" << endl;
+    for (const auto& [genome_name, genome_stats] : stats) {
+        cout << "\t\t\"" << genome_name << "\": {" << endl;
+        for (const auto& [stat_name, stat_value] : genome_stats) {
+            cout << "\t\t\t\"" << stat_name << "\": " << stat_value << "," << endl;
+        }
+        cout << "\t\t}," << endl;
+    }
+    cout << "\t}" << endl;
+    cout << "}" << endl;
+}
+
+void Stats::print_json_to_file(string output_file) {
+    ofstream out(output_file);
+    out << "{" << endl;
+    out << "\t\"unmapped\": " << unmatched << "," << endl;
+    out << "\t\"mapped\": {" << endl;
+    for (const auto& [genome_name, genome_stats] : stats) {
+        out << "\t\t\"" << genome_name << "\": {" << endl;
+        for (const auto& [stat_name, stat_value] : genome_stats) {
+            out << "\t\t\t\"" << stat_name << "\": " << stat_value << "," << endl;
+        }
+        out << "\t\t}," << endl;
+    }
+    out << "\t}" << endl;
+    out << "}" << endl;
+    out.close();
 }

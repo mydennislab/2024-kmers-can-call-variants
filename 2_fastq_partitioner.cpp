@@ -81,9 +81,15 @@ int count_intersections(const std::vector<KeyType>& s, const flat_hash_map<KeyTy
 }
 
 
-int main() {
+int main(int argc, char** argv) {
 
-    // KMER_HASHER->hash_kmer("ACTGCGTAGCTAGCTAGC");
+
+
+    /*
+        0- stats
+    */
+
+    Stats stats;
 
 
     /*
@@ -93,6 +99,7 @@ int main() {
     BINS_PHMAP bins;
     load_all_bins("/home/mabuelanin/dib-dev/2023-decontamination/data/bins", &bins, 3);
     cout << "All genomes has been loaded" << endl;
+
 
     // Mapping genomes to ids
     flat_hash_map<string, int> genome_to_id;
@@ -112,7 +119,7 @@ int main() {
     int chunk_size = 10000;
     int kSize = 21;
     kmerDecoder* KMER_HASHER = kmerDecoder::getInstance(KMERS, mumur_hasher, { {"kSize", kSize} });
-
+    bool write_fastq = false;
 
 
 
@@ -129,16 +136,16 @@ int main() {
     base_filename = base_filename.substr(0, base_filename.find('R1'));
 
     map<string, fastqWriter*> fasta_writer;
+    if (write_fastq) {
+        cerr << "Creating fasta file handlers" << endl;
+        for (auto& [genome_name, _] : bins) {
+            string file_name = "genome_" + genome_name + "_readsPartition";
+            fasta_writer[genome_name] = new fastqWriter(file_name);
+        }
 
-    cerr << "Creating fasta file handlers" << endl;
-    for (auto& [genome_name, _] : bins) {
-        string file_name = "genome_" + genome_name + "_readsPartition";
-        fasta_writer[genome_name] = new fastqWriter(file_name);
+        string unmapped_file_name = base_filename + "_unmapped_partition.fa";
+        fasta_writer["unmapped"] = new fastqWriter(unmapped_file_name);
     }
-
-    string unmapped_file_name = base_filename + "_unmapped_partition.fa";
-    fasta_writer["unmapped"] = new fastqWriter(unmapped_file_name);
-
 
     /*
         3- Processing reads
@@ -175,39 +182,42 @@ int main() {
         }
 
 
-
-
-
         // iterate over kmers and get the genomes that contain them
 
 
         vector<uint32_t> kmers_matches;
         for (auto& [genome_name, genome_kmers] : bins) {
-            
+
             size_t intersection_kmers = count_intersections(kmers_vec, genome_kmers);
-            
+
             for (size_t i = 0; i < intersection_kmers; i++) {
                 kmers_matches.emplace_back(genome_to_id[genome_name]);
             }
         }
 
 
-        auto category = classify_and_match_read_kmers(kmers_matches, 0.1, 2.0);
-        if (category.first == "unmapped") {
-            fasta_writer["unmapped"]->write(kseq_1, kseq_2);
-        }
-        else if (category.first == "unique") {
-            assert(category.second.size() == 1);
-            fasta_writer[id_to_genome[category.second[0]]]->write(kseq_1, kseq_2);
-        }
-        else if (category.first == "ambiguous") {
-            for (auto const& genomeID : category.second) {
-                fasta_writer[id_to_genome[genomeID]]->write(kseq_1, kseq_2);
+        auto category = classify_and_match_read_kmers(kmers_matches, stats, 0.1, 2.0);
+
+
+        if (write_fastq) {
+            if (category.first == "unmapped") {
+                fasta_writer["unmapped"]->write(kseq_1, kseq_2);
+            }
+            else if (category.first == "unique") {
+                assert(category.second.size() == 1);
+                fasta_writer[id_to_genome[category.second[0]]]->write(kseq_1, kseq_2);
+            }
+            else if (category.first == "ambiguous") {
+                for (auto const& genomeID : category.second) {
+                    fasta_writer[id_to_genome[genomeID]]->write(kseq_1, kseq_2);
+                }
             }
         }
 
-
     }
+
+    // Write stats
+    stats.print_json_to_file(base_filename + ".json");
 
 }
 

@@ -15,18 +15,10 @@ typedef std::chrono::high_resolution_clock Time;
 using phmap::flat_hash_map;
 using namespace std;
 
-using BINS_PHMAP = phmap::parallel_flat_hash_map<std::string, phmap::flat_hash_set<uint64_t>,
+using BINS_PHMAP = phmap::parallel_flat_hash_map<std::string, flat_hash_map<uint64_t, uint32_t>,
     phmap::priv::hash_default_hash<std::string>,
     phmap::priv::hash_default_eq<std::string>,
-    std::allocator<std::pair<const std::string, phmap::flat_hash_set<uint64_t>>>,
-    1,
-    std::mutex>;
-
-
-using BINS_KMER_COUNT = phmap::parallel_flat_hash_map<std::string, uint32_t,
-    phmap::priv::hash_default_hash<std::string>,
-    phmap::priv::hash_default_eq<std::string>,
-    std::allocator<std::pair<const std::string, uint32_t>>,
+    std::allocator<std::pair<const std::string, phmap::flat_hash_map<uint64_t, uint32_t>>>,
     1,
     std::mutex>;
 
@@ -70,6 +62,24 @@ inline string time_diff(std::chrono::high_resolution_clock::time_point& t1);
 
 
 
+class Stats {
+
+private:
+    flat_hash_map<string, flat_hash_map<string, uint64_t>> stats;
+    flat_hash_map<int, string> id_to_genome;
+public:
+    uint64_t unmatched = 0;
+    void increment_unmapped();
+    void increment_ambiguous(uint32_t genome_name);
+    void increment_unique(uint32_t genome_name);
+    void print_json();
+    void print_json_to_file(string output_file);
+    void set_it_to_genome(flat_hash_map<int, string> & id_to_genome);
+    string get_genome_name(uint32_t id);
+};
 
 
+
+std::pair<string, std::vector<uint32_t>> classify_and_match_read_kmers(const std::vector<uint32_t>& genome_ids, Stats& stats, double coverage_threshold = 0.1, double ratio_threshold = 2.0);
+// Without stats
 std::pair<string, std::vector<uint32_t>> classify_and_match_read_kmers(const std::vector<uint32_t>& genome_ids, double coverage_threshold = 0.1, double ratio_threshold = 2.0);
