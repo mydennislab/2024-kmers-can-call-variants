@@ -82,5 +82,9 @@ public:
 
 
 std::pair<string, std::vector<uint32_t>> classify_and_match_read_kmers(const std::vector<uint32_t>& genome_ids, Stats& stats, double coverage_threshold = 0.1, double ratio_threshold = 2.0);
+
+// Coverage on total kmers
+std::pair<string, std::vector<uint32_t>> classify_and_match_read_kmers(const std::vector<uint32_t>& genome_ids, uint32_t total_kmers, Stats& stats, double coverage_threshold = 0.1, double ratio_threshold = 2.0);
+
 // Without stats
 std::pair<string, std::vector<uint32_t>> classify_and_match_read_kmers(const std::vector<uint32_t>& genome_ids, double coverage_threshold = 0.1, double ratio_threshold = 2.0);

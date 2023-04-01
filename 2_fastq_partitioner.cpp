@@ -292,7 +292,8 @@ int main(int argc, char** argv) {
 
         double coverage_threshold = 0.1;
         double abundance_threshold = 2.0;
-        auto category = classify_and_match_read_kmers(kmers_matches, stats, coverage_threshold, abundance_threshold);
+        uint32_t total_kmers = kmers_matches.size();
+        auto category = classify_and_match_read_kmers(kmers_matches, total_kmers, stats, coverage_threshold, abundance_threshold);
 
 
         if (write_fastq) {
