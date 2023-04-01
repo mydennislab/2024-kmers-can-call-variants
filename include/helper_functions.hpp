@@ -67,9 +67,11 @@ class Stats {
 private:
     flat_hash_map<string, flat_hash_map<string, uint64_t>> stats;
     flat_hash_map<int, string> id_to_genome;
+    uint64_t reads = 0;
 public:
     uint64_t unmatched = 0;
     void increment_unmapped();
+    void increment_reads();
     void increment_ambiguous(uint32_t genome_name);
     void increment_unique(uint32_t genome_name);
     void print_json_to_file(string output_file);

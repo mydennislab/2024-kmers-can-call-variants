@@ -143,6 +143,7 @@ The classify_and_match_read_kmers function takes the following parameters:
   abundant than the others, increasing confidence in the classification.
 */
 std::pair<string, std::vector<uint32_t>> classify_and_match_read_kmers(const std::vector<uint32_t>& genome_ids, Stats& stats, double coverage_threshold, double ratio_threshold) {
+    stats.increment_reads();
     if (genome_ids.empty()) {
         stats.increment_unmapped();
         return { "unmapped", {} };
@@ -255,18 +256,27 @@ string Stats::get_genome_name(uint32_t id) {
     return id_to_genome[id];
 }
 
+void Stats::increment_reads(){
+    this->reads++;
+}
+
+
 void Stats::print_json_to_file(string output_file) {
     ofstream out(output_file);
     out << "{" << endl;
+    out << "\t\"total_reads\": " << reads << "," << endl;
     out << "\t\"unmapped\": " << unmatched << "," << endl;
+    out << "\t\"unmapped%\": " << 100*((double)unmatched/reads) << "," << endl;
     out << "\t\"mapped\": {" << endl;
     for (const auto& [genome_name, genome_stats] : stats) {
         out << "\t\t\"" << genome_name << "\": {" << endl;
-        for (const auto& [stat_name, stat_value] : genome_stats) {
-            out << "\t\t\t\"" << stat_name << "\": " << stat_value << "," << endl;
+        for (const auto& [matching_class, count] : genome_stats) {
+            out << "\t\t\t\"" << matching_class << "\": " << count << "," << endl;
+            out << "\t\t\t\"" << matching_class << "%\": " << 100*((double)count/reads) << "," << endl;
         }
         out << "\t\t}," << endl;
     }
+
     out << "\t}" << endl;
     out << "}" << endl;
     out.close();
