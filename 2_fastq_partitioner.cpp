@@ -93,6 +93,7 @@ void print_help()
         "  --R2 <file>          R2 input file (required)\n"
         "  --genomes_dir <dir>  dir containing genomes bins created by refToBin\n"
         "  --write              Enable writing partitioned fastq files\n"
+        "  --sensitive          Enable sensitive mode (at least one kmer match)\n"
         "  --kSize <int>    K-mer size (required)\n"
         "  --threads <number>   Number of genomes loading threads (default: 1)\n"
         "  --help, -h           Show this help message and exit\n";
@@ -108,7 +109,7 @@ int main(int argc, char** argv) {
     */
 
     argh::parser cmdl;
-    cmdl.add_params({ "--genomes_dir", "--threads", "--R1", "--R2", "--write", "--kSize", "--help", "-h" });
+    cmdl.add_params({ "--genomes_dir", "--threads", "--R1", "--R2", "--write", "--sensitive", "--kSize", "--help", "-h" });
     cmdl.parse(argc, argv);
 
     if (cmdl[{"--help", "-h"}])
@@ -124,6 +125,7 @@ int main(int argc, char** argv) {
     int kSize;
     string genomes_dir;
     bool write = false;
+    bool sensitive = false;
 
     if (cmdl({ "--threads" }))
         cmdl({ "--threads" }, 1) >> threads;
@@ -166,6 +168,9 @@ int main(int argc, char** argv) {
     if (cmdl({"--write"}))
         write = true;
 
+    if (cmdl({"--sensitive"}))
+        sensitive = true;
+
     std::cout << "Threads: " << threads << std::endl;
     std::cout << "R1 File: " << R1_file << std::endl;
     std::cout << "R2 File: " << R2_file << std::endl;
@@ -173,6 +178,7 @@ int main(int argc, char** argv) {
     std::cout << "K-mer size: " << kSize << std::endl;
     std::cout << "Genomes dir: " << genomes_dir << std::endl;
     std::cout << "Write: " << write << std::endl;
+    std::cout << "sensitive: " << sensitive << std::endl;
     // print line
     std::cout << "----------------------------------------\n" << std::endl;
 
@@ -293,7 +299,11 @@ int main(int argc, char** argv) {
         double coverage_threshold = 0.1;
         double abundance_threshold = 2.0;
         uint32_t total_kmers = kmers_matches.size();
-        auto category = classify_and_match_read_kmers(kmers_matches, total_kmers, stats, coverage_threshold, abundance_threshold);
+        
+        std::pair<string, std::vector<uint32_t>> category;
+
+        if (sensitive) category = classify_and_match_read_kmers(kmers_matches, total_kmers, stats, coverage_threshold, abundance_threshold);
+        else category = sensitive_classify_and_match_read_kmers(kmers_matches, stats);
 
 
         if (write_fastq) {

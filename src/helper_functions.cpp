@@ -274,6 +274,42 @@ std::pair<string, std::vector<uint32_t>> classify_and_match_read_kmers(const std
     }
 }
 
+// Super Sensitive
+std::pair<string, std::vector<uint32_t>> sensitive_classify_and_match_read_kmers(const std::vector<uint32_t>& genome_ids, Stats& stats) {
+    stats.increment_reads();
+    if (genome_ids.empty()) {
+        stats.increment_unmapped();
+        return { "unmapped", {} };
+    }
+
+    flat_hash_map<uint32_t, uint32_t> genome_id_count;
+    for (const auto& id : genome_ids) {
+        genome_id_count[id]++;
+    }
+
+    auto max_it = std::max_element(genome_id_count.begin(), genome_id_count.end(),
+        [](const auto& a, const auto& b) { return a.second < b.second; });
+
+    std::vector<uint32_t> matching_genome_ids{max_it->first};
+    genome_id_count.erase(max_it);
+
+    for (const auto& [genome_id, count] : genome_id_count) {
+        matching_genome_ids.push_back(genome_id);
+    }
+
+    if (matching_genome_ids.size() > 1) {
+        for (const auto& id : matching_genome_ids) {
+            stats.increment_ambiguous(id);
+        }
+        return { "ambiguous", matching_genome_ids };
+    }
+    else {
+        stats.increment_unique(matching_genome_ids[0]);
+        return { "unique", matching_genome_ids };
+    }
+}
+
+
 
 // STATS
 

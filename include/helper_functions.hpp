@@ -88,3 +88,6 @@ std::pair<string, std::vector<uint32_t>> classify_and_match_read_kmers(const std
 
 // Without stats
 std::pair<string, std::vector<uint32_t>> classify_and_match_read_kmers(const std::vector<uint32_t>& genome_ids, double coverage_threshold = 0.1, double ratio_threshold = 2.0);
+
+// Super sensitive
+std::pair<string, std::vector<uint32_t>> sensitive_classify_and_match_read_kmers(const std::vector<uint32_t>& genome_ids, Stats& stats);
