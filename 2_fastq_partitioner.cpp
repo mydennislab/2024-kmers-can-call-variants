@@ -1,5 +1,5 @@
 // create inverted kmers index in parallel
-#include "string"
+#include <string>
 #include "kseq/kseq.h"
 #include <stdexcept>
 #include "tuple"
@@ -80,10 +80,6 @@ int count_intersections(const std::vector<KeyType>& s, const flat_hash_map<KeyTy
 
     return intersection_count;
 }
-
-#include <iostream>
-#include <string>
-#include <argh.h>
 
 void print_help()
 {
@@ -188,6 +184,7 @@ int main(int argc, char** argv) {
     */
 
     Stats stats;
+    flat_hash_map<string, Stats> sample_stats;
 
 
     /*
@@ -195,7 +192,6 @@ int main(int argc, char** argv) {
     */
 
     BINS_PHMAP bins;
-    load_all_bins(genomes_dir, &bins, threads);
     cout << "All genomes has been loaded" << endl;
 
 
