@@ -1,5 +1,0 @@
-
-
-
-
-# Read fasta files
