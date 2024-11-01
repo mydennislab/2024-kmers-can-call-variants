@@ -192,6 +192,7 @@ int main(int argc, char** argv) {
     */
 
     BINS_PHMAP bins;
+    load_all_bins(genomes_dir, &bins, threads);
     cout << "All genomes has been loaded" << endl;
 
 
