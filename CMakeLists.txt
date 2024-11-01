@@ -45,9 +45,18 @@ include_directories(${KSEQ_INCLUDE_DIRS})
 
 # Add executable
 add_executable(refToBin 1_ref_to_bin.cpp)
+add_executable(fqExtractByKmers fastq_extract_by_kmers.cpp src/helper_functions.cpp)
 
 # Link libraries
 target_link_libraries(refToBin
+        kmerDecoder
+        pthread
+        z
+        zstr::zstr
+        OpenMP::OpenMP_CXX
+)
+
+target_link_libraries(fqExtractByKmers
         kmerDecoder
         pthread
         z

@@ -323,9 +323,3 @@ int main(int argc, char** argv) {
     stats.print_json_to_file(base_filename + ".json");
 
 }
-
-
-
-// kmerDecoder * KMER_HASHER = kmerDecoder::getInstance(KMERS, mumur_hasher, { {"kSize", 31} });
-//     KMER_HASHER->hash_kmer("ACTGCGTAGCTAGCTAGC");
-
