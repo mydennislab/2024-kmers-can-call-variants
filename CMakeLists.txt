@@ -1,65 +1,61 @@
-cmake_minimum_required (VERSION 3.4)
-project (kDecontaminer C CXX)
-set(default_build_type "Release")
-set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -std=c++17 -fPIC -lgomp -lrt -fopenmp -pedantic -O3 -Ofast")
+cmake_minimum_required(VERSION 3.4)
+project(kDecontaminer C CXX)
 
+# Set C++ standard and position-independent code
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
+# Set default build type to Release if not specified
+if(NOT CMAKE_BUILD_TYPE)
+        set(default_build_type "Release")
+        set(CMAKE_BUILD_TYPE "${default_build_type}" CACHE STRING "Choose the type of build." FORCE)
+endif()
+
+# Common compiler flags
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -pedantic -O3 -Ofast")
+
+# Find OpenMP
+find_package(OpenMP REQUIRED)
+if(OpenMP_FOUND)
+        message(STATUS "Found OpenMP")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+        set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
+endif()
+
+# Add subdirectories
 add_subdirectory(lib/kmerDecoder)
 add_subdirectory(lib/zstr)
 
-include_directories("${PROJECT_SOURCE_DIR}/include")
+# Include directories
+include_directories(
+        "${PROJECT_SOURCE_DIR}/include"
+        "${PROJECT_SOURCE_DIR}/lib/kmerDecoder/lib/parallel-hashmap/"
+        "${PROJECT_SOURCE_DIR}/lib/kmerDecoder/lib/kseq/include"
+        "${PROJECT_SOURCE_DIR}/lib/argh"
+)
 
-include_directories("${PROJECT_SOURCE_DIR}/lib/kmerDecoder/lib/parallel-hashmap/")
-
-
+# CPM Package for kseq
 CPMAddPackage(
         NAME kseq
         SOURCE_DIR ${CMAKE_CURRENT_LIST_DIR}/lib/kmerDecoder/kseq
 )
 set(KSEQ_INCLUDE_DIRS "${PROJECT_SOURCE_DIR}/lib/kmerDecoder/lib/kseq/include")
-include_directories($KSEQ_INCLUDE_DIRS)
+include_directories(${KSEQ_INCLUDE_DIRS})
 
-include_directories("${PROJECT_SOURCE_DIR}/lib/argh")
-
-# add_executable (peReadsStats reads_stats.cpp src/kseqReader.cpp)
-# target_link_libraries (peReadsStats kProcessor z)
-# target_include_directories(peReadsStats INTERFACE ${kProcessor_INCLUDE_PATH})
-
-# add_executable (analyzeIdx analyze_index.cpp)
-# target_link_libraries (analyzeIdx kProcessor)
-# target_include_directories(analyzeIdx INTERFACE ${kProcessor_INCLUDE_PATH})
-
-# add_executable (cDBG_partitioner cDBG_partitioner.cpp)
-# target_link_libraries (cDBG_partitioner kProcessor z)
-# target_include_directories(cDBG_partitioner INTERFACE ${kProcessor_INCLUDE_PATH})
-
-# add_executable (commonKmers commonKmers.cpp)
-# target_link_libraries (commonKmers kProcessor z)
-# target_include_directories(commonKmers INTERFACE ${kProcessor_INCLUDE_PATH})
-
-# add_executable (fastq_partitioner fastq_partitioner.cpp)
-# target_link_libraries (fastq_partitioner kProcessor z)
-# target_include_directories(fastq_partitioner INTERFACE ${kProcessor_INCLUDE_PATH})
-
-#add_executable (testKseq test_kseq.cpp)
-#target_link_libraries (testKseq z)
-
-
-
-# genesIndexing executable (Have an issue after some time in the execution)
-#add_executable (genesIndexing genes_indexing.cpp)
-#target_link_libraries (genesIndexing kProcessor pthread z)
-#target_include_directories(genesIndexing INTERFACE ${kProcessor_INCLUDE_PATH})
-
-
-# 1) Convert the reference to bin
+# Add executable
 add_executable(refToBin 1_ref_to_bin.cpp)
-target_link_libraries(refToBin kmerDecoder pthread z zstr::zstr)
 
+# Link libraries
+target_link_libraries(refToBin
+        kmerDecoder
+        pthread
+        z
+        zstr::zstr
+        OpenMP::OpenMP_CXX
+)
 
-add_executable(fqPart 2_fastq_partitioner.cpp src/helper_functions.cpp)
-target_link_libraries(fqPart kmerDecoder pthread z zstr::zstr kseq::kseq)
-
-
-# Testing
-add_executable(test test/test_scoring.cpp src/helper_functions.cpp)
-target_link_libraries(test)
+# Link 'rt' library only on Linux
+if(UNIX AND NOT APPLE)
+        target_link_libraries(refToBin rt)
+endif()
