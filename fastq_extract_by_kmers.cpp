@@ -88,8 +88,6 @@ void print_help()
         "  --R1 <file>          R1 input file (required)\n"
         "  --R2 <file>          R2 input file (required)\n"
         "  --genomes_dir <dir>  dir containing genomes bins created by refToBin\n"
-        "  --write              Enable writing partitioned fastq files\n"
-        "  --sensitive          Enable sensitive mode (at least one kmer match)\n"
         "  --kSize <int>    K-mer size (required)\n"
         "  --threads <number>   Number of genomes loading threads (default: 1)\n"
         "  --help, -h           Show this help message and exit\n";
@@ -100,12 +98,8 @@ void print_help()
 
 int main(int argc, char** argv) {
 
-    /*
-        -1 Parsing command line arguments using argh
-    */
-
     argh::parser cmdl;
-    cmdl.add_params({ "--genomes_dir", "--threads", "--R1", "--R2", "--write", "--sensitive", "--kSize", "--help", "-h" });
+    cmdl.add_params({ "--genomes_dir", "--threads", "--R1", "--R2", "--kSize", "--output" });
     cmdl.parse(argc, argv);
 
     if (cmdl[{"--help", "-h"}])
@@ -115,19 +109,17 @@ int main(int argc, char** argv) {
     }
 
     int threads = 1; // Default value
-    string R1_file;
-    string R2_file;
-    string output = "NA"; // Default value
+    std::string R1_file;
+    std::string R2_file;
+    std::string output = "NA"; // Default value
     int kSize;
-    string genomes_dir;
-    bool write = false;
-    bool sensitive = false;
+    std::string genomes_dir;
 
-    if (cmdl({ "--threads" }))
-        cmdl({ "--threads" }, 1) >> threads;
-
+    // Check required arguments and retrieve their values
+    if (cmdl({ "--threads" }, 1)) cmdl({ "--threads" }, 1) >> threads;
+    
     if (cmdl({ "--R1" }))
-        cmdl({ "--R1" }, 1) >> R1_file;
+        cmdl({ "--R1" }) >> R1_file;
     else
     {
         std::cerr << "Error: R1 file argument is required.\n";
@@ -135,7 +127,7 @@ int main(int argc, char** argv) {
     }
 
     if (cmdl({ "--R2" }))
-        cmdl({ "--R2" }, 1) >> R2_file;
+        cmdl({ "--R2" }) >> R2_file;
     else
     {
         std::cerr << "Error: R2 file argument is required.\n";
@@ -143,29 +135,23 @@ int main(int argc, char** argv) {
     }
 
     if (cmdl({ "--genomes_dir" }))
-        cmdl({ "--genomes_dir" }, 1) >> genomes_dir;
+        cmdl({ "--genomes_dir" }) >> genomes_dir;
     else
     {
         std::cerr << "Error: genomes_dir argument is required.\n";
         return 1;
     }
 
-    if (cmdl({ "--output" }))
-        cmdl({ "--output" }, 1) >> output;
-
     if (cmdl({ "--kSize" }))
-        cmdl({ "--kSize" }, 1) >> kSize;
+        cmdl({ "--kSize" }) >> kSize;
     else
     {
         std::cerr << "Error: kSize argument is required.\n";
         return 1;
     }
 
-    if (cmdl({"--write"}))
-        write = true;
-
-    if (cmdl({"--sensitive"}))
-        sensitive = true;
+    if (cmdl({ "--output" }))
+        cmdl({ "--output" }) >> output;
 
     std::cout << "Threads: " << threads << std::endl;
     std::cout << "R1 File: " << R1_file << std::endl;
@@ -173,8 +159,7 @@ int main(int argc, char** argv) {
     std::cout << "Output: " << output << std::endl;
     std::cout << "K-mer size: " << kSize << std::endl;
     std::cout << "Genomes dir: " << genomes_dir << std::endl;
-    std::cout << "Write: " << write << std::endl;
-    std::cout << "sensitive: " << sensitive << std::endl;
+    std::cout << "----------------------------------------\n" << std::endl;
     // print line
     std::cout << "----------------------------------------\n" << std::endl;
 
